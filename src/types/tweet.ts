@@ -7,6 +7,7 @@ export interface User {
   followers: number;
   following: number;
   isVerified?: boolean;
+  isPro?: boolean;
   joinedDate: string;
   coverImage?: string;
 }
@@ -23,6 +24,7 @@ export interface Tweet {
   isLiked: boolean;
   isRetweeted: boolean;
   isBookmarked: boolean;
+  isEdited?: boolean;
   images?: string[];
   parentTweet?: Tweet;
   hashtags?: string[];
