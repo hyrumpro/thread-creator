@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Settings, Sparkles, LogOut, Moon, HelpCircle, ExternalLink } from "lucide-react";
 import {
   DropdownMenu,
@@ -9,7 +10,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useTweets } from "@/context/TweetContext";
 import { ProUpgradeModal } from "./ProUpgradeModal";
-import { ConfigurationModal } from "./ConfigurationModal";
 
 interface UserMenuProps {
   children: React.ReactNode;
@@ -18,7 +18,6 @@ interface UserMenuProps {
 export function UserMenu({ children }: UserMenuProps) {
   const { currentUser } = useTweets();
   const [showProModal, setShowProModal] = useState(false);
-  const [showConfigModal, setShowConfigModal] = useState(false);
 
   return (
     <>
@@ -37,12 +36,11 @@ export function UserMenu({ children }: UserMenuProps) {
             <p className="text-muted-foreground text-sm">@{currentUser.username}</p>
           </div>
 
-          <DropdownMenuItem 
-            onClick={() => setShowConfigModal(true)}
-            className="gap-3 px-3 py-2.5 cursor-pointer"
-          >
-            <Settings className="w-5 h-5" />
-            <span>Configuration</span>
+          <DropdownMenuItem asChild className="gap-3 px-3 py-2.5 cursor-pointer">
+            <Link to="/settings">
+              <Settings className="w-5 h-5" />
+              <span>Settings</span>
+            </Link>
           </DropdownMenuItem>
 
           {!currentUser.isPro && (
@@ -56,9 +54,11 @@ export function UserMenu({ children }: UserMenuProps) {
           )}
 
           {currentUser.isPro && (
-            <DropdownMenuItem className="gap-3 px-3 py-2.5 cursor-pointer text-primary">
-              <Sparkles className="w-5 h-5 fill-primary" />
-              <span className="font-semibold">Pro Member</span>
+            <DropdownMenuItem asChild className="gap-3 px-3 py-2.5 cursor-pointer text-primary">
+              <Link to="/settings">
+                <Sparkles className="w-5 h-5 fill-primary" />
+                <span className="font-semibold">Pro Member</span>
+              </Link>
             </DropdownMenuItem>
           )}
 
@@ -89,7 +89,6 @@ export function UserMenu({ children }: UserMenuProps) {
       </DropdownMenu>
 
       <ProUpgradeModal open={showProModal} onOpenChange={setShowProModal} />
-      <ConfigurationModal open={showConfigModal} onOpenChange={setShowConfigModal} />
     </>
   );
 }

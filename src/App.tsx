@@ -9,6 +9,7 @@ import Profile from "./pages/Profile";
 import Bookmarks from "./pages/Bookmarks";
 import Hashtag from "./pages/Hashtag";
 import Explore from "./pages/Explore";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +28,7 @@ const App = () => (
             <Route path="/bookmarks" element={<Bookmarks />} />
             <Route path="/hashtag/:tag" element={<Hashtag />} />
             <Route path="/explore" element={<Explore />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="/notifications" element={<Index />} />
             <Route path="/messages" element={<Index />} />
             <Route path="/more" element={<Index />} />
