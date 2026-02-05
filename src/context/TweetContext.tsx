@@ -12,6 +12,8 @@ interface TweetContextType {
   toggleBookmark: (tweetId: string) => void;
   addComment: (tweetId: string, content: string) => void;
   updateProfile: (updates: Partial<User>) => void;
+  editTweet: (tweetId: string, newContent: string) => void;
+  deleteTweet: (tweetId: string) => void;
 }
 
 const TweetContext = createContext<TweetContextType | undefined>(undefined);
@@ -105,6 +107,20 @@ export function TweetProvider({ children }: { children: ReactNode }) {
     );
   };
 
+  const editTweet = (tweetId: string, newContent: string) => {
+    setTweets((prev) =>
+      prev.map((tweet) =>
+        tweet.id === tweetId
+          ? { ...tweet, content: newContent, isEdited: true }
+          : tweet
+      )
+    );
+  };
+
+  const deleteTweet = (tweetId: string) => {
+    setTweets((prev) => prev.filter((tweet) => tweet.id !== tweetId));
+  };
+
   const bookmarkedTweets = tweets.filter((tweet) => tweet.isBookmarked);
 
   return (
@@ -119,6 +135,8 @@ export function TweetProvider({ children }: { children: ReactNode }) {
         toggleBookmark,
         addComment,
         updateProfile,
+        editTweet,
+        deleteTweet,
       }}
     >
       {children}

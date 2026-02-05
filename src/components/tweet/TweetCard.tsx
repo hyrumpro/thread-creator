@@ -1,20 +1,43 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Heart, MessageCircle, Repeat2, Bookmark, Share, MoreHorizontal } from "lucide-react";
+import { Heart, MessageCircle, Repeat2, Bookmark, Share, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { Tweet } from "@/types/tweet";
 import { useTweets } from "@/context/TweetContext";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import { CommentModal } from "./CommentModal";
+import { EditTweetModal } from "./EditTweetModal";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface TweetCardProps {
   tweet: Tweet;
 }
 
 export function TweetCard({ tweet }: TweetCardProps) {
-  const { toggleLike, toggleRetweet, toggleBookmark } = useTweets();
+  const { toggleLike, toggleRetweet, toggleBookmark, currentUser, deleteTweet } = useTweets();
   const [isAnimatingLike, setIsAnimatingLike] = useState(false);
   const [showCommentModal, setShowCommentModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  const isOwnTweet = tweet.author.id === currentUser.id;
+  const canEdit = isOwnTweet && currentUser.isPro;
 
   const handleLike = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -40,6 +63,11 @@ export function TweetCard({ tweet }: TweetCardProps) {
     e.preventDefault();
     e.stopPropagation();
     setShowCommentModal(true);
+  };
+
+  const handleDelete = () => {
+    deleteTweet(tweet.id);
+    setShowDeleteDialog(false);
   };
 
   const formatContent = (content: string) => {
@@ -117,9 +145,71 @@ export function TweetCard({ tweet }: TweetCardProps) {
             <span className="text-muted-foreground hover:underline">
               {formatDistanceToNow(tweet.createdAt, { addSuffix: false })}
             </span>
-            <button className="ml-auto p-2 -m-2 rounded-full hover:bg-primary/10 text-muted-foreground hover:text-primary">
-              <MoreHorizontal className="w-5 h-5" />
-            </button>
+            {tweet.isEdited && (
+              <>
+                <span className="text-muted-foreground">·</span>
+                <span className="text-muted-foreground text-xs">Edited</span>
+              </>
+            )}
+            
+            {/* Tweet Options Menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                <button className="ml-auto p-2 -m-2 rounded-full hover:bg-primary/10 text-muted-foreground hover:text-primary">
+                  <MoreHorizontal className="w-5 h-5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent 
+                align="end" 
+                className="w-56 bg-background border-border shadow-xl z-50"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {canEdit && (
+                  <DropdownMenuItem 
+                    onClick={() => setShowEditModal(true)}
+                    className="gap-3 cursor-pointer"
+                  >
+                    <Pencil className="w-4 h-4" />
+                    <span>Edit tweet</span>
+                  </DropdownMenuItem>
+                )}
+                {isOwnTweet && !currentUser.isPro && (
+                  <DropdownMenuItem className="gap-3 cursor-pointer text-muted-foreground" disabled>
+                    <Pencil className="w-4 h-4" />
+                    <span>Edit (Pro only)</span>
+                  </DropdownMenuItem>
+                )}
+                {isOwnTweet && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={() => setShowDeleteDialog(true)}
+                      className="gap-3 cursor-pointer text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>Delete tweet</span>
+                    </DropdownMenuItem>
+                  </>
+                )}
+                {!isOwnTweet && (
+                  <>
+                    <DropdownMenuItem className="gap-3 cursor-pointer">
+                      Not interested in this post
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="gap-3 cursor-pointer">
+                      Follow @{tweet.author.username}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="gap-3 cursor-pointer text-destructive focus:text-destructive">
+                      Block @{tweet.author.username}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="gap-3 cursor-pointer text-destructive focus:text-destructive">
+                      Report post
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {/* Content */}
@@ -202,6 +292,34 @@ export function TweetCard({ tweet }: TweetCardProps) {
         onOpenChange={setShowCommentModal}
         tweet={tweet}
       />
+
+      {canEdit && (
+        <EditTweetModal
+          open={showEditModal}
+          onOpenChange={setShowEditModal}
+          tweet={tweet}
+        />
+      )}
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent className="bg-background border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Tweet?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This can't be undone and it will be removed from your profile, the timeline of any accounts that follow you, and from search results.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDelete}
+              className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
