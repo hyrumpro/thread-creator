@@ -1,22 +1,24 @@
 import React, { createContext, useContext, useState, ReactNode } from "react";
 import { Tweet, User } from "@/types/tweet";
-import { initialTweets, currentUser } from "@/data/mockData";
+import { initialTweets, currentUser as defaultUser } from "@/data/mockData";
 
 interface TweetContextType {
   tweets: Tweet[];
   bookmarkedTweets: Tweet[];
   currentUser: User;
-  addTweet: (content: string) => void;
+  addTweet: (content: string, images?: string[]) => void;
   toggleLike: (tweetId: string) => void;
   toggleRetweet: (tweetId: string) => void;
   toggleBookmark: (tweetId: string) => void;
   addComment: (tweetId: string, content: string) => void;
+  updateProfile: (updates: Partial<User>) => void;
 }
 
 const TweetContext = createContext<TweetContextType | undefined>(undefined);
 
 export function TweetProvider({ children }: { children: ReactNode }) {
   const [tweets, setTweets] = useState<Tweet[]>(initialTweets);
+  const [currentUser, setCurrentUser] = useState<User>(defaultUser);
 
   const extractHashtags = (content: string): string[] => {
     const hashtagRegex = /#(\w+)/g;
@@ -24,7 +26,7 @@ export function TweetProvider({ children }: { children: ReactNode }) {
     return matches ? matches.map((tag) => tag.slice(1)) : [];
   };
 
-  const addTweet = (content: string) => {
+  const addTweet = (content: string, images?: string[]) => {
     const newTweet: Tweet = {
       id: Date.now().toString(),
       content,
@@ -38,6 +40,7 @@ export function TweetProvider({ children }: { children: ReactNode }) {
       isRetweeted: false,
       isBookmarked: false,
       hashtags: extractHashtags(content),
+      images: images && images.length > 0 ? images : undefined,
     };
     setTweets((prev) => [newTweet, ...prev]);
   };
@@ -90,6 +93,18 @@ export function TweetProvider({ children }: { children: ReactNode }) {
     );
   };
 
+  const updateProfile = (updates: Partial<User>) => {
+    setCurrentUser((prev) => ({ ...prev, ...updates }));
+    // Update author info in existing tweets
+    setTweets((prev) =>
+      prev.map((tweet) =>
+        tweet.author.id === currentUser.id
+          ? { ...tweet, author: { ...tweet.author, ...updates } }
+          : tweet
+      )
+    );
+  };
+
   const bookmarkedTweets = tweets.filter((tweet) => tweet.isBookmarked);
 
   return (
@@ -103,6 +118,7 @@ export function TweetProvider({ children }: { children: ReactNode }) {
         toggleRetweet,
         toggleBookmark,
         addComment,
+        updateProfile,
       }}
     >
       {children}
