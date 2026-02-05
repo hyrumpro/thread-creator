@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { MainLayout } from "@/components/layout/MainLayout";
-import { ArrowLeft, User, CreditCard, Bell, Lock, Palette, Shield, HelpCircle, Sparkles, Check, ChevronRight } from "lucide-react";
+import { ArrowLeft, User, CreditCard, Bell, Lock, Palette, Shield, Sparkles, Check, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -32,10 +31,10 @@ const Settings = () => {
   };
 
   return (
-    <MainLayout>
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border">
-        <div className="flex items-center gap-6 p-4">
+        <div className="flex items-center gap-6 p-4 max-w-4xl mx-auto">
           <Link to="/" className="p-2 -m-2 rounded-full hover:bg-secondary">
             <ArrowLeft className="w-5 h-5" />
           </Link>
@@ -43,7 +42,7 @@ const Settings = () => {
         </div>
       </header>
 
-      <div className="flex min-h-[calc(100vh-65px)]">
+      <div className="flex max-w-4xl mx-auto min-h-[calc(100vh-65px)]">
         {/* Sidebar Navigation */}
         <nav className="w-64 border-r border-border p-2 flex-shrink-0">
           {tabs.map((tab) => {
@@ -97,7 +96,7 @@ const Settings = () => {
           )}
         </div>
       </div>
-    </MainLayout>
+    </div>
   );
 };
 
