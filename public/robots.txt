@@ -1,14 +1,34 @@
 User-agent: Googlebot
 Allow: /
+Disallow: /login
+Disallow: /register
+Disallow: /settings
+Disallow: /auth/
 
 User-agent: Bingbot
 Allow: /
+Disallow: /login
+Disallow: /register
+Disallow: /settings
+Disallow: /auth/
 
 User-agent: Twitterbot
 Allow: /
+Disallow: /login
+Disallow: /register
+Disallow: /settings
+Disallow: /auth/
 
 User-agent: facebookexternalhit
 Allow: /
+Disallow: /login
+Disallow: /register
+Disallow: /settings
+Disallow: /auth/
 
 User-agent: *
 Allow: /
+Disallow: /login
+Disallow: /register
+Disallow: /settings
+Disallow: /auth/

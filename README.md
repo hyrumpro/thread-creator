@@ -1,73 +1,124 @@
-# Welcome to your Lovable project
+# Thread Creator
 
-## Project info
+A modern Twitter/X clone built with Next.js 15, Supabase, and shadcn/ui.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Features
 
-## How can I edit this code?
+- Multi-method authentication (Email, Google OAuth, Magic Link)
+- Tweet creation, editing, and deletion
+- Like, retweet, and bookmark functionality
+- User profiles with follow/unfollow
+- Hashtag support
+- Algorithmic timeline ("For You") and chronological feed ("Following")
+- Pro subscription with Stripe
+- Rate limiting (database-enforced)
+- Row Level Security (RLS)
+- Dark mode
+- Fully responsive design
 
-There are several ways of editing your application.
+## Tech Stack
 
-**Use Lovable**
+- **Next.js 15** - React framework with App Router
+- **Supabase** - PostgreSQL database, authentication, RLS
+- **Stripe** - Subscription payments
+- **Cloudinary** - Image uploads
+- **shadcn/ui** - UI components
+- **Tailwind CSS** - Styling
+- **React Query** - Data fetching
+- **TypeScript** - Type safety
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## Getting Started
 
-Changes made via Lovable will be committed automatically to this repo.
+### Prerequisites
 
-**Use your preferred IDE**
+- Node.js 18+
+- Supabase account
+- Stripe account (for payments)
+- Cloudinary account (for images)
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Installation
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+```bash
+# Install dependencies
+npm install
 
-Follow these steps:
+# Copy environment file
+cp .env.example .env.local
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Add your credentials to .env.local
+# Run development server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+### Database Setup
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+1. Create a Supabase project
+2. Go to SQL Editor
+3. Run `database/schema.sql`
+4. Run `database/indexes.sql`
 
-**Use GitHub Codespaces**
+### Environment Variables
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=eyJ...
+SUPABASE_SERVICE_ROLE_KEY=eyJ...
+CLOUDINARY_CLOUD_NAME=xxx
+CLOUDINARY_API_KEY=xxx
+CLOUDINARY_API_SECRET=xxx
+STRIPE_SECRET_KEY=sk_xxx
+STRIPE_WEBHOOK_SECRET=whsec_xxx
+STRIPE_PRO_PRICE_ID=price_xxx
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
 
-## What technologies are used for this project?
+## Project Structure
 
-This project is built with:
+```
+app/                 # Next.js App Router pages
+components/          # React components
+  ui/               # shadcn/ui components
+  layout/           # Layout components
+  tweet/            # Tweet-related components
+  profile/          # Profile components
+hooks/               # Custom React hooks
+lib/                 # Utilities and services
+  auth.ts           # Authentication service
+  tweet-service.ts  # Tweet operations
+  profile-service.ts# Profile operations
+  stripe.ts         # Stripe integration
+  cloudinary.ts     # Image uploads
+database/            # SQL schema files
+integrations/        # Third-party integrations
+  supabase/         # Supabase client
+types/               # TypeScript types
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## Deployment
 
-## How can I deploy this project?
+### Vercel (Recommended)
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+1. Push to GitHub
+2. Import in Vercel
+3. Add environment variables
+4. Deploy
 
-## Can I connect a custom domain to my Lovable project?
+### Stripe Webhook
 
-Yes, you can!
+Set up a webhook in Stripe Dashboard pointing to:
+```
+https://your-domain.com/api/stripe/webhook
+```
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## Scripts
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+```bash
+npm run dev      # Development server
+npm run build    # Production build
+npm start        # Start production server
+npm run lint     # Run ESLint
+```
+
+## License
+
+MIT
