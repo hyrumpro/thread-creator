@@ -224,7 +224,7 @@ BEGIN
   INSERT INTO tweet_stats (tweet_id) VALUES (NEW.id);
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 CREATE TRIGGER create_tweet_stats_trigger AFTER INSERT ON tweets
   FOR EACH ROW EXECUTE FUNCTION create_tweet_stats();
@@ -254,7 +254,7 @@ BEGIN
   END IF;
   RETURN COALESCE(NEW, OLD);
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 CREATE TRIGGER update_tweet_interaction_count_trigger
   AFTER INSERT OR DELETE ON tweet_interactions
@@ -273,11 +273,30 @@ BEGIN
   END IF;
   RETURN COALESCE(NEW, OLD);
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 CREATE TRIGGER update_comments_count_trigger
   AFTER INSERT OR DELETE ON tweets
   FOR EACH ROW EXECUTE FUNCTION update_comments_count();
+
+-- =====================================================
+-- TRIGGERS - Quotes Count
+-- =====================================================
+CREATE OR REPLACE FUNCTION update_quotes_count()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF TG_OP = 'INSERT' AND NEW.quoted_tweet_id IS NOT NULL THEN
+    UPDATE tweet_stats SET quotes_count = quotes_count + 1 WHERE tweet_id = NEW.quoted_tweet_id;
+  ELSIF TG_OP = 'DELETE' AND OLD.quoted_tweet_id IS NOT NULL THEN
+    UPDATE tweet_stats SET quotes_count = GREATEST(quotes_count - 1, 0) WHERE tweet_id = OLD.quoted_tweet_id;
+  END IF;
+  RETURN COALESCE(NEW, OLD);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+CREATE TRIGGER update_quotes_count_trigger
+  AFTER INSERT OR DELETE ON tweets
+  FOR EACH ROW EXECUTE FUNCTION update_quotes_count();
 
 -- =====================================================
 -- TRIGGERS - Follow Counts
@@ -294,7 +313,7 @@ BEGIN
   END IF;
   RETURN COALESCE(NEW, OLD);
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 CREATE TRIGGER update_follow_counts_trigger
   AFTER INSERT OR DELETE ON follows
@@ -324,16 +343,46 @@ CREATE TRIGGER update_profile_tweets_count_trigger
 -- =====================================================
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
+DECLARE
+  base_username TEXT;
+  final_username TEXT;
+  counter INTEGER := 0;
 BEGIN
+  -- Derive base username: prefer explicit username metadata, else sanitize email prefix
+  base_username := COALESCE(
+    NEW.raw_user_meta_data->>'username',
+    LOWER(REGEXP_REPLACE(SPLIT_PART(NEW.email, '@', 1), '[^a-zA-Z0-9_]', '_', 'g'))
+  );
+
+  -- Sanitize: strip any remaining invalid chars, truncate to 15
+  base_username := LOWER(REGEXP_REPLACE(base_username, '[^a-zA-Z0-9_]', '_', 'g'));
+  base_username := LEFT(base_username, 15);
+
+  -- Pad to minimum length of 3 if needed (e.g. very short email prefix)
+  IF char_length(base_username) < 3 THEN
+    base_username := RPAD(base_username, 3, '_');
+  END IF;
+
+  -- Guarantee uniqueness by appending an incrementing suffix
+  final_username := base_username;
+  WHILE EXISTS (SELECT 1 FROM public.profiles WHERE username = final_username) LOOP
+    counter := counter + 1;
+    final_username := LEFT(base_username, 12) || '_' || counter::TEXT;
+  END LOOP;
+
   INSERT INTO public.profiles (user_id, username, display_name, email, avatar)
   VALUES (
     NEW.id,
-    COALESCE(NEW.raw_user_meta_data->>'username', SPLIT_PART(NEW.email, '@', 1)),
-    COALESCE(NEW.raw_user_meta_data->>'display_name', NEW.raw_user_meta_data->>'full_name', SPLIT_PART(NEW.email, '@', 1)),
+    final_username,
+    COALESCE(
+      NEW.raw_user_meta_data->>'display_name',
+      NEW.raw_user_meta_data->>'full_name',
+      SPLIT_PART(NEW.email, '@', 1)
+    ),
     NEW.email,
     COALESCE(
       NEW.raw_user_meta_data->>'avatar_url',
-      'https://api.dicebear.com/7.x/avataaars/svg?seed=' || COALESCE(NEW.raw_user_meta_data->>'username', SPLIT_PART(NEW.email, '@', 1))
+      'https://api.dicebear.com/7.x/avataaars/svg?seed=' || final_username
     )
   );
   RETURN NEW;
@@ -355,9 +404,9 @@ BEGIN
     UPDATE profiles SET is_pro = false WHERE user_id = OLD.user_id AND is_pro IS DISTINCT FROM false;
     RETURN OLD;
   ELSE
-    IF NEW.status = 'active' OR NEW.status = 'trialing' THEN
+    IF NEW.status = 'active' THEN
       UPDATE profiles SET is_pro = true WHERE user_id = NEW.user_id AND is_pro IS DISTINCT FROM true;
-    ELSIF NEW.status = 'canceled' OR NEW.status = 'unpaid' THEN
+    ELSIF NEW.status = 'canceled' OR NEW.status = 'inactive' THEN
       UPDATE profiles SET is_pro = false WHERE user_id = NEW.user_id AND is_pro IS DISTINCT FROM false;
     END IF;
     RETURN NEW;
@@ -381,8 +430,6 @@ RETURNS TRIGGER AS $$
 BEGIN
   IF NEW.is_pro = true AND (OLD.is_pro = false OR OLD.is_pro IS NULL) THEN
     NEW.is_verified := true;
-  ELSIF NEW.is_pro = false AND OLD.is_pro = true THEN
-    NEW.is_verified := false;
   END IF;
   RETURN NEW;
 END;
@@ -401,14 +448,14 @@ CREATE OR REPLACE FUNCTION check_tweet_rate_limit()
 RETURNS TRIGGER AS $$
 DECLARE
   tweet_count INT;
-  is_pro BOOLEAN;
+  v_is_pro BOOLEAN;
 BEGIN
-  SELECT is_pro INTO is_pro FROM profiles WHERE user_id = NEW.user_id;
-  
+  SELECT is_pro INTO v_is_pro FROM profiles WHERE user_id = NEW.user_id;
+
   SELECT COUNT(*) INTO tweet_count FROM tweets
   WHERE user_id = NEW.user_id AND created_at > NOW() - INTERVAL '1 hour';
 
-  IF is_pro THEN
+  IF v_is_pro THEN
     IF tweet_count >= 100 THEN
       RAISE EXCEPTION 'Rate limit exceeded. Pro users can post 100 tweets per hour.';
     END IF;
@@ -462,10 +509,10 @@ CREATE TRIGGER enforce_tweet_length_limit
 CREATE OR REPLACE FUNCTION check_edit_permission()
 RETURNS TRIGGER AS $$
 DECLARE
-  is_pro BOOLEAN;
+  v_is_pro BOOLEAN;
 BEGIN
-  SELECT is_pro INTO is_pro FROM profiles WHERE user_id = NEW.user_id;
-  IF NOT is_pro THEN
+  SELECT is_pro INTO v_is_pro FROM profiles WHERE user_id = NEW.user_id;
+  IF NOT v_is_pro THEN
     RAISE EXCEPTION 'Tweet editing is a Pro feature. Upgrade to edit your tweets!';
   END IF;
   RETURN NEW;
@@ -644,9 +691,10 @@ CREATE POLICY "tweets_delete" ON tweets FOR DELETE USING ((SELECT auth.uid()) = 
 CREATE POLICY "tweet_stats_select" ON tweet_stats FOR SELECT USING (true);
 
 -- Tweet interactions policies
-CREATE POLICY "tweet_interactions_select" ON tweet_interactions FOR SELECT USING (true);
+CREATE POLICY "tweet_interactions_select" ON tweet_interactions FOR SELECT USING ((SELECT auth.uid()) = user_id);
 CREATE POLICY "tweet_interactions_insert" ON tweet_interactions FOR INSERT WITH CHECK ((SELECT auth.uid()) = user_id);
 CREATE POLICY "tweet_interactions_delete" ON tweet_interactions FOR DELETE USING ((SELECT auth.uid()) = user_id);
+CREATE POLICY "tweet_interactions_update" ON tweet_interactions FOR UPDATE USING ((SELECT auth.uid()) = user_id);
 
 -- Follows policies
 CREATE POLICY "follows_select" ON follows FOR SELECT USING (true);
@@ -671,9 +719,53 @@ CREATE POLICY "user_roles_select" ON user_roles FOR SELECT USING (true);
 CREATE POLICY "subscriptions_select" ON subscriptions FOR SELECT USING ((SELECT auth.uid()) = user_id);
 CREATE POLICY "subscriptions_insert" ON subscriptions FOR INSERT WITH CHECK ((SELECT auth.uid()) = user_id);
 CREATE POLICY "subscriptions_update" ON subscriptions FOR UPDATE USING ((SELECT auth.uid()) = user_id);
+CREATE POLICY "subscriptions_delete" ON subscriptions FOR DELETE USING ((SELECT auth.uid()) = user_id);
 
 -- =====================================================
 -- GRANT PERMISSIONS
 -- =====================================================
 GRANT EXECUTE ON FUNCTION increment_tweet_views(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION get_scored_timeline(UUID, INT, INT, INT) TO authenticated;
+
+-- =====================================================
+-- PERFORMANCE INDEXES (Production)
+-- =====================================================
+
+-- Timeline: primary hot path — tweets without parents ordered by time
+-- The existing idx_tweets_no_parent covers (created_at DESC WHERE parent_tweet_id IS NULL)
+-- but we add a composite for score sorting that also includes user_id for following feed
+CREATE INDEX IF NOT EXISTS idx_tweets_user_created_all ON tweets(user_id, created_at DESC);
+
+-- Profile discovery: suggested users sorted by followers
+CREATE INDEX IF NOT EXISTS idx_profiles_followers_desc ON profiles(followers_count DESC);
+
+-- Hashtags: trending sorted by count
+CREATE INDEX IF NOT EXISTS idx_hashtags_count_desc ON hashtags(tweet_count DESC);
+
+-- Tweet interactions: composite for bookmark/like/retweet lookups per user
+CREATE INDEX IF NOT EXISTS idx_tweet_interactions_user_type ON tweet_interactions(user_id, interaction_type);
+
+-- Follows: bidirectional lookup composite (covers both follower and following queries)
+CREATE INDEX IF NOT EXISTS idx_follows_both ON follows(follower_id, following_id);
+CREATE INDEX IF NOT EXISTS idx_follows_reverse ON follows(following_id, follower_id);
+
+-- Notifications: actor lookup for deduplication
+CREATE INDEX IF NOT EXISTS idx_notifications_actor ON notifications(actor_id, type, tweet_id);
+
+-- Subscriptions: fast Pro status sync
+CREATE INDEX IF NOT EXISTS idx_subscriptions_user_status ON subscriptions(user_id, status);
+
+-- =====================================================
+-- STRIPE WEBHOOK IDEMPOTENCY
+CREATE TABLE stripe_webhook_events (
+  event_id TEXT PRIMARY KEY,
+  event_type TEXT NOT NULL,
+  processed_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Auto-clean events older than 30 days to keep the table small
+CREATE INDEX idx_stripe_webhook_events_processed_at ON stripe_webhook_events(processed_at);
+
+-- Service role can read/write; no user-level access needed
+ALTER TABLE stripe_webhook_events ENABLE ROW LEVEL SECURITY;
+-- No policies: only accessible via service role (bypasses RLS)

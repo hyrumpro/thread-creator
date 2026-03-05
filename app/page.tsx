@@ -1,14 +1,33 @@
 'use client';
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { TweetComposer } from "@/components/tweet/TweetComposer";
 import { TweetFeed } from "@/components/tweet/TweetFeed";
 import { useTimeline } from "@/hooks/useTimeline";
+import { PaymentSuccessModal, PaymentCancelledModal } from "@/components/payment/PaymentResultModal";
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<"for-you" | "following">("for-you");
+  const [paymentStatus, setPaymentStatus] = useState<'success' | 'cancelled' | null>(null);
   const timelineQuery = useTimeline(activeTab);
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const payment = params.get('payment');
+    if (payment === 'success') {
+      setPaymentStatus('success');
+      // Invalidate profile so Pro status refreshes once webhook fires
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
+    } else if (payment === 'cancelled') {
+      setPaymentStatus('cancelled');
+    }
+    if (payment) {
+      window.history.replaceState({}, '', '/');
+    }
+  }, [queryClient]);
 
   const tweets = useMemo(
     () => timelineQuery.data?.pages.flatMap((page) => page.items) ?? [],
@@ -56,6 +75,16 @@ export default function Home() {
         isFetchingMore={timelineQuery.isFetchingNextPage}
         onLoadMore={timelineQuery.hasNextPage ? timelineQuery.fetchNextPage : undefined}
         hasMore={timelineQuery.hasNextPage}
+      />
+
+      {/* Payment result modals */}
+      <PaymentSuccessModal
+        open={paymentStatus === 'success'}
+        onOpenChange={(open) => !open && setPaymentStatus(null)}
+      />
+      <PaymentCancelledModal
+        open={paymentStatus === 'cancelled'}
+        onOpenChange={(open) => !open && setPaymentStatus(null)}
       />
     </MainLayout>
   );

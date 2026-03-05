@@ -94,6 +94,61 @@
     --sidebar-border: 216 20% 18%;
     --sidebar-ring: 203 89% 53%;
   }
+
+  /* Dim theme — slightly lighter dark, like Twitter's Dim mode */
+  .dim {
+    --background: 212 35% 18%;
+    --foreground: 210 20% 96%;
+    --card: 212 35% 20%;
+    --card-foreground: 210 20% 96%;
+    --popover: 212 35% 20%;
+    --popover-foreground: 210 20% 96%;
+    --primary: 203 89% 53%;
+    --primary-foreground: 210 20% 98%;
+    --secondary: 212 35% 24%;
+    --secondary-foreground: 210 20% 96%;
+    --muted: 212 30% 26%;
+    --muted-foreground: 215 15% 58%;
+    --accent: 212 35% 24%;
+    --accent-foreground: 210 20% 96%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 20% 98%;
+    --border: 212 30% 28%;
+    --input: 212 30% 28%;
+    --ring: 203 89% 53%;
+    --tweet-hover: 212 35% 22%;
+    --sidebar-background: 212 35% 18%;
+    --sidebar-accent: 212 35% 24%;
+    --sidebar-border: 212 30% 28%;
+  }
+
+  /* Light theme */
+  .light {
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 203 89% 45%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 94%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 94%;
+    --muted-foreground: 215 16% 40%;
+    --accent: 210 40% 94%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 85%;
+    --input: 214 32% 85%;
+    --ring: 203 89% 45%;
+    --tweet-hover: 210 40% 97%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-accent: 210 40% 94%;
+    --sidebar-border: 214 32% 85%;
+  }
 }
 
 @layer base {
@@ -134,7 +189,7 @@
   }
 
   .nav-link {
-    @apply flex items-center gap-4 px-4 py-3 text-xl rounded-full transition-colors duration-200;
+    @apply flex items-center gap-4 px-3 lg:px-4 py-3 text-[17px] rounded-full transition-colors duration-200 justify-center lg:justify-start;
   }
 
   .nav-link:hover {
@@ -188,6 +243,22 @@
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+
+  /* Reduce motion — disables all transitions and animations */
+  html.reduce-motion *,
+  html.reduce-motion *::before,
+  html.reduce-motion *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* High contrast — boosts muted text and border visibility */
+  html.high-contrast {
+    --muted-foreground: 215 20% 78%;
+    --border: 216 20% 38%;
   }
 
   .animate-fade-in {

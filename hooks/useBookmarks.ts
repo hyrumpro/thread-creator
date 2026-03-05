@@ -58,7 +58,7 @@ async function getBookmarksWithInteractions(limit: number = 50, offset: number =
       isBookmarked: true,
       images: tweet.images && tweet.images.length > 0 ? tweet.images : undefined,
     };
-  }).filter(Boolean) ?? [];
+  }).filter((t): t is NonNullable<typeof t> => t !== null) ?? [];
 }
 
 export function useBookmarks() {

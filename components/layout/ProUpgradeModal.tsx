@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useTweets } from "@/context/TweetContext";
+import { useSession } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
 interface ProUpgradeModalProps {
@@ -28,9 +29,15 @@ const proFeatures = [
 
 export function ProUpgradeModal({ open, onOpenChange }: ProUpgradeModalProps) {
   const { currentUser } = useTweets();
+  const { data: authUser } = useSession();
   const [isLoading, setIsLoading] = useState(false);
 
   const handleUpgrade = async () => {
+    if (!authUser) {
+      onOpenChange(false);
+      window.location.href = '/login?redirect=/settings';
+      return;
+    }
     setIsLoading(true);
     try {
       const response = await fetch('/api/stripe/checkout', {
@@ -42,8 +49,8 @@ export function ProUpgradeModal({ open, onOpenChange }: ProUpgradeModalProps) {
         throw new Error(error.error || 'Failed to create checkout session');
       }
 
-      const { url } = await response.json();
-      window.location.href = url;
+      const { data } = await response.json();
+      window.location.href = data.url;
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to start checkout");
     } finally {
@@ -89,6 +96,7 @@ export function ProUpgradeModal({ open, onOpenChange }: ProUpgradeModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg bg-background border-border p-0 overflow-hidden">
+        <DialogTitle className="sr-only">Upgrade to Pro</DialogTitle>
         <button
           onClick={() => onOpenChange(false)}
           className="absolute right-4 top-4 rounded-full p-1 hover:bg-secondary transition-colors z-10"

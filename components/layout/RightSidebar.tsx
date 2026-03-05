@@ -103,9 +103,10 @@ export function RightSidebar() {
               className="flex items-center gap-3 p-4 hover:bg-secondary transition-colors"
             >
               <img
-                src={user.avatar}
+                src={user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`}
                 alt={user.displayName}
-                className="w-10 h-10 rounded-full"
+                className="w-10 h-10 rounded-full object-cover"
+                onError={(e) => { e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`; e.currentTarget.onerror = null; }}
               />
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-sm truncate flex items-center gap-1">
@@ -176,7 +177,8 @@ function SearchResultItem({ result }: { result: SearchResult }) {
       <img
         src={result.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${result.username}`}
         alt={result.displayName || ''}
-        className="w-10 h-10 rounded-full"
+        className="w-10 h-10 rounded-full object-cover"
+        onError={(e) => { e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${result.username}`; e.currentTarget.onerror = null; }}
       />
       <div className="flex-1 min-w-0">
         <p className="font-bold text-sm truncate flex items-center gap-1">

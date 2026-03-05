@@ -5,30 +5,40 @@ import { TweetFeed } from "@/components/tweet/TweetFeed";
 import { useTweets } from "@/context/TweetContext";
 import { ArrowLeft, Calendar, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { EditProfileModal } from "@/components/profile/EditProfileModal";
 import { User } from "@/types/tweet";
 import { useProfileByUsername, useUserTweets, useUserFollowStatus } from "@/hooks/useProfileQuery";
 import { profileService } from "@/lib/profile-service";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { useSession } from "@/hooks/useAuth";
 
 export default function Profile() {
   const params = useParams();
+  const router = useRouter();
   const { currentUser, updateProfile } = useTweets();
+  const { data: authUser, isLoading: authLoading } = useSession();
   const [activeTab, setActiveTab] = useState<"posts" | "replies" | "media" | "likes">("posts");
   const [showEditModal, setShowEditModal] = useState(false);
   const [isFollowLoading, setIsFollowLoading] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const username = params.username 
-    ? (Array.isArray(params.username) ? params.username[0] : params.username) 
+  const username = params.username
+    ? (Array.isArray(params.username) ? params.username[0] : params.username)
     : undefined;
 
   const isOwnProfile = !username || username === currentUser.username;
+
+  // Redirect guest to login when accessing their own profile
+  useEffect(() => {
+    if (!authLoading && !authUser && isOwnProfile) {
+      router.replace('/login?redirect=/profile');
+    }
+  }, [authUser, authLoading, isOwnProfile, router]);
 
   const { data: fetchedProfile, isLoading: isProfileLoading, error: profileError } = 
     useProfileByUsername(isOwnProfile ? undefined : username);
@@ -162,6 +172,7 @@ export default function Profile() {
               src={displayUser.avatar}
               alt={displayUser.displayName}
               className="w-32 h-32 rounded-full border-4 border-background object-cover"
+              onError={(e) => { e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${displayUser.username}`; e.currentTarget.onerror = null; }}
             />
             {displayUser.isPro && (
               <div className="absolute bottom-2 right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center border-2 border-background">

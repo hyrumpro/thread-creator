@@ -2,14 +2,19 @@
 
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import { profileService, Profile } from '@/lib/profile-service';
-import { tweetService, Tweet } from '@/lib/tweet-service';
+import { tweetService } from '@/lib/tweet-service';
 import { supabase } from '@/integrations/supabase/client';
+import { useSession } from '@/hooks/useAuth';
 
 export const profileKeys = {
   all: ['profile'] as const,
   current: () => [...profileKeys.all, 'current'] as const,
   byUsername: (username: string) => [...profileKeys.all, 'username', username] as const,
   tweets: (userId: string) => ['tweets', 'user', userId] as const,
+};
+
+export const subscriptionKeys = {
+  byUser: (userId: string) => ['subscription', userId] as const,
 };
 
 async function fetchCurrentProfile(): Promise<Profile | null> {
@@ -25,11 +30,38 @@ async function fetchCurrentProfile(): Promise<Profile | null> {
 }
 
 export function useCurrentProfile() {
+  const { data: user } = useSession();
   return useQuery({
     queryKey: profileKeys.current(),
     queryFn: fetchCurrentProfile,
+    enabled: !!user,
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
+  });
+}
+
+export interface Subscription {
+  status: string;
+  plan: string;
+  current_period_end: string | null;
+  cancel_at_period_end: boolean;
+}
+
+export function useSubscription() {
+  const { data: user } = useSession();
+  return useQuery({
+    queryKey: subscriptionKeys.byUser(user?.id ?? ''),
+    queryFn: async (): Promise<Subscription | null> => {
+      const { data, error } = await supabase
+        .from('subscriptions')
+        .select('status, plan, current_period_end, cancel_at_period_end')
+        .eq('user_id', user!.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -49,12 +81,12 @@ interface UserTweetsPage {
 }
 
 async function fetchUserTweetsPage(
-  userId: string, 
-  cursor?: string, 
+  userId: string,
+  cursor?: string,
   limit: number = 20
 ): Promise<UserTweetsPage> {
   const { data: { user } } = await supabase.auth.getUser();
-  
+
   let query = supabase
     .from('tweets')
     .select(`
@@ -83,8 +115,8 @@ async function fetchUserTweetsPage(
   const sliced = hasMore ? data.slice(0, limit) : data;
 
   const tweetIds = sliced.map(t => t.id);
-  const interactions = user 
-    ? await tweetService.batchGetUserInteractions(tweetIds, user.id) 
+  const interactions = user
+    ? await tweetService.batchGetUserInteractions(tweetIds, user.id)
     : {};
 
   const items = sliced.map(tweet => ({
@@ -123,7 +155,7 @@ async function fetchUserTweetsPage(
 export function useUserTweets(userId: string | undefined) {
   return useInfiniteQuery({
     queryKey: profileKeys.tweets(userId || ''),
-    queryFn: ({ pageParam }) => 
+    queryFn: ({ pageParam }) =>
       userId ? fetchUserTweetsPage(userId, pageParam, 20) : Promise.resolve({ items: [], nextCursor: undefined }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage: UserTweetsPage) => lastPage.nextCursor,
@@ -137,5 +169,6 @@ export function useUserFollowStatus(userId: string | undefined) {
     queryKey: ['follow', userId],
     queryFn: () => userId ? profileService.isFollowing(userId) : false,
     enabled: !!userId,
+    staleTime: 30 * 1000,
   });
 }

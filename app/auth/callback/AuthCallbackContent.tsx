@@ -5,6 +5,25 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/integrations/supabase/client';
 import { authService } from '@/lib/auth';
 
+// Helper shared by both session paths
+async function resolveSession(
+  user: NonNullable<Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session']>['user'],
+  email: string,
+  isNewUser: boolean,
+  isOAuthUser: boolean
+) {
+  // DB trigger (handle_new_user) always creates the profile on INSERT into auth.users.
+  // createProfileIfNotExists is only called as a safety net for new OAuth/magic-link users
+  // in case the trigger somehow failed. Returning users skip this entirely (perf).
+  if (isNewUser && isOAuthUser) {
+    try {
+      await authService.createProfileIfNotExists(user.id, email, user.user_metadata);
+    } catch {
+      // Trigger already created it — safe to ignore
+    }
+  }
+}
+
 export function AuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -14,7 +33,7 @@ export function AuthCallbackContent() {
       try {
         const errorParam = searchParams.get('error');
         const errorDescription = searchParams.get('error_description');
-        
+
         if (errorParam) {
           console.error('OAuth error:', errorParam, errorDescription);
           router.push(`/login?error=${encodeURIComponent(errorDescription || errorParam)}`);
@@ -31,30 +50,22 @@ export function AuthCallbackContent() {
 
         if (session?.user) {
           const isOAuthUser = session.user.app_metadata?.provider !== 'email';
-          
-          if (isOAuthUser) {
-            try {
-              await authService.createProfileIfNotExists(
-                session.user.id,
-                session.user.email || '',
-                session.user.user_metadata
-              );
-            } catch (profileError: any) {
-              console.error('Profile creation error:', profileError);
-              if (!profileError.message?.includes('already exists')) {
-                router.push('/login?error=profile_creation_failed');
-                return;
-              }
-            }
-          }
+          const isNewUser = Date.now() - new Date(session.user.created_at).getTime() < 5 * 60 * 1000;
 
-          const redirectTo = searchParams.get('redirect') || '/';
-          router.push(redirectTo);
+          await resolveSession(session.user, session.user.email ?? '', isNewUser, isOAuthUser);
+
+          // OAuth users go to onboarding (page skips if already completed)
+          if (isOAuthUser) {
+            router.push('/onboarding');
+          } else {
+            router.push(searchParams.get('redirect') ?? '/');
+          }
         } else {
+          // PKCE code exchange path (magic link, some OAuth flows)
           const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(
             window.location.href
           );
-          
+
           if (exchangeError) {
             console.error('Exchange error:', exchangeError);
             router.push('/login?error=session_exchange_failed');
@@ -62,22 +73,18 @@ export function AuthCallbackContent() {
           }
 
           const { data: { session: newSession } } = await supabase.auth.getSession();
-          
+
           if (newSession?.user) {
             const isOAuthUser = newSession.user.app_metadata?.provider !== 'email';
-            
+            const isNewUser = Date.now() - new Date(newSession.user.created_at).getTime() < 5 * 60 * 1000;
+
+            await resolveSession(newSession.user, newSession.user.email ?? '', isNewUser, isOAuthUser);
+
             if (isOAuthUser) {
-              try {
-                await authService.createProfileIfNotExists(
-                  newSession.user.id,
-                  newSession.user.email || '',
-                  newSession.user.user_metadata
-                );
-              } catch (profileError: any) {
-                console.error('Profile creation error:', profileError);
-              }
+              router.push('/onboarding');
+            } else {
+              router.push('/');
             }
-            router.push('/');
           } else {
             router.push('/login');
           }

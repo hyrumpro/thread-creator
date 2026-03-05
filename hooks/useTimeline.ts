@@ -30,5 +30,6 @@ export function useTimeline(feed: 'for-you' | 'following') {
       : { feed: 'following' as const },
     getNextPageParam: (lastPage: TimelinePage) => lastPage.nextPageParam,
     refetchOnWindowFocus: false,
+    staleTime: 60 * 1000,
   });
 }

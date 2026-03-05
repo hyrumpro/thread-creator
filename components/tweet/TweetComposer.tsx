@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from "react";
+import Link from "next/link";
 import { Image, Smile, Calendar, MapPin, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTweets } from "@/context/TweetContext";
@@ -28,9 +29,21 @@ export function TweetComposer({
   const remaining = maxLength - content.length;
   const progress = (content.length / maxLength) * 100;
 
+  // Guest: show sign-in CTA instead of composer
+  if (currentUser.id === 'guest') {
+    return (
+      <div className="flex items-center justify-between gap-4 p-4 border-b border-border">
+        <p className="text-muted-foreground text-[15px]">Sign in to post and join the conversation.</p>
+        <Link href="/login">
+          <Button className="rounded-full font-bold px-5 flex-shrink-0">Sign in</Button>
+        </Link>
+      </div>
+    );
+  }
+
   const handleSubmit = async () => {
     if ((!content.trim() && images.length === 0) || content.length > maxLength || isLoading) return;
-    
+
     setIsLoading(true);
     try {
       await addTweet(content, images);
@@ -38,6 +51,8 @@ export function TweetComposer({
       setImages([]);
       setIsFocused(false);
       onPost?.();
+    } catch {
+      // Error already shown via toast in context
     } finally {
       setIsLoading(false);
     }

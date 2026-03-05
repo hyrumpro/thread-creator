@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,8 +14,8 @@ export function MoreMenu() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button className="nav-link w-full">
-          <MoreHorizontal className="w-6 h-6" />
-          <span>More</span>
+          <MoreHorizontal className="w-[26px] h-[26px] flex-shrink-0" />
+          <span className="hidden lg:inline">More</span>
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-64">
@@ -39,10 +38,10 @@ export function MoreMenu() {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <a href="https://help.twitter.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 cursor-pointer">
+          <Link href="/help" className="flex items-center gap-3 cursor-pointer">
             <HelpCircle className="w-5 h-5" />
             <span>Help Center</span>
-          </a>
+          </Link>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

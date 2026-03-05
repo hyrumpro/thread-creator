@@ -25,12 +25,12 @@ export interface ProfileData {
 export const authService = {
   // Sign up with email and password
   async signUp({ email, password, username, displayName }: SignUpData) {
-    // Check if username is already taken
+    // Check if username is already taken (.maybeSingle returns null data when not found, no error)
     const { data: existingUser } = await supabase
       .from('profiles')
       .select('username')
       .eq('username', username)
-      .single();
+      .maybeSingle();
 
     if (existingUser) {
       throw new Error('Username is already taken');

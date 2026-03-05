@@ -28,14 +28,14 @@ async function handlePost(request: NextRequest) {
     }
   )
 
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+  const { data: { user }, error: sessionError } = await supabase.auth.getUser()
 
-  if (sessionError || !session) {
+  if (sessionError || !user) {
     throw ApiError.unauthorized('Please sign in to continue.')
   }
 
-  const userId = session.user.id
-  const email = session.user.email
+  const userId = user.id
+  const email = user.email
 
   if (!email) {
     throw ApiError.badRequest('Email address is required for checkout.')
@@ -85,16 +85,16 @@ async function handleGet(request: NextRequest) {
     }
   )
 
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+  const { data: { user }, error: sessionError } = await supabase.auth.getUser()
 
-  if (sessionError || !session) {
+  if (sessionError || !user) {
     throw ApiError.unauthorized('Please sign in to continue.')
   }
 
   const { data: subscription, error: subError } = await supabase
     .from('subscriptions')
     .select('provider_customer_id, status')
-    .eq('user_id', session.user.id)
+    .eq('user_id', user.id)
     .single()
 
   if (subError) {

@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from "react";
+import { useState, memo, useCallback, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Heart, MessageCircle, Repeat2, Bookmark, Share, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { Tweet } from "@/types/tweet";
 import { useTweets } from "@/context/TweetContext";
@@ -31,8 +32,9 @@ interface TweetCardProps {
   tweet: Tweet;
 }
 
-export function TweetCard({ tweet }: TweetCardProps) {
+export const TweetCard = memo(function TweetCard({ tweet }: TweetCardProps) {
   const { toggleLike, toggleRetweet, toggleBookmark, currentUser, deleteTweet } = useTweets();
+  const router = useRouter();
   const [isAnimatingLike, setIsAnimatingLike] = useState(false);
   const [showCommentModal, setShowCommentModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -41,39 +43,43 @@ export function TweetCard({ tweet }: TweetCardProps) {
   const isOwnTweet = tweet.author.id === currentUser.id;
   const canEdit = isOwnTweet && currentUser.isPro;
 
-  const handleLike = async (e: React.MouseEvent) => {
+  const handleLike = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsAnimatingLike(true);
     await toggleLike(tweet.id, tweet.isLiked);
     setTimeout(() => setIsAnimatingLike(false), 300);
-  };
+  }, [toggleLike, tweet.id, tweet.isLiked]);
 
-  const handleRetweet = async (e: React.MouseEvent) => {
+  const handleRetweet = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     await toggleRetweet(tweet.id, tweet.isRetweeted);
-  };
+  }, [toggleRetweet, tweet.id, tweet.isRetweeted]);
 
-  const handleBookmark = async (e: React.MouseEvent) => {
+  const handleBookmark = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     await toggleBookmark(tweet.id, tweet.isBookmarked);
-  };
+  }, [toggleBookmark, tweet.id, tweet.isBookmarked]);
 
-  const handleComment = (e: React.MouseEvent) => {
+  const handleComment = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setShowCommentModal(true);
-  };
+  }, []);
 
-  const handleDelete = async () => {
+  const handleDelete = useCallback(async () => {
     await deleteTweet(tweet.id);
     setShowDeleteDialog(false);
-  };
+  }, [deleteTweet, tweet.id]);
 
-  const formatContent = (content: string) => {
-    const parts = content.split(/(#\w+|@\w+|https?:\/\/[^\s]+)/g);
+  const handleCardClick = useCallback(() => {
+    router.push(`/tweet/${tweet.id}`);
+  }, [router, tweet.id]);
+
+  const formattedContent = useMemo(() => {
+    const parts = tweet.content.split(/(#\w+|@\w+|https?:\/\/[^\s]+)/g);
     return parts.map((part, index) => {
       if (part.startsWith("#")) {
         return (
@@ -120,7 +126,7 @@ export function TweetCard({ tweet }: TweetCardProps) {
       }
       return part;
     });
-  };
+  }, [tweet.content]);
 
   const formatNumber = (num: number): string => {
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
@@ -137,12 +143,13 @@ export function TweetCard({ tweet }: TweetCardProps) {
 
   return (
     <>
-      <article className="tweet-card flex gap-3 cursor-pointer animate-fade-in">
+      <article className="tweet-card flex gap-3 cursor-pointer animate-fade-in" onClick={handleCardClick}>
         <Link href={`/profile/${tweet.author.username}`} onClick={(e) => e.stopPropagation()}>
           <img
-            src={tweet.author.avatar}
+            src={tweet.author.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${tweet.author.username}`}
             alt={tweet.author.displayName}
-            className="w-10 h-10 rounded-full hover:opacity-90 transition-opacity"
+            className="w-10 h-10 rounded-full hover:opacity-90 transition-opacity object-cover"
+            onError={(e) => { e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${tweet.author.username}`; e.currentTarget.onerror = null; }}
           />
         </Link>
 
@@ -231,7 +238,7 @@ export function TweetCard({ tweet }: TweetCardProps) {
             </DropdownMenu>
           </div>
 
-          <p className="mt-1 whitespace-pre-wrap break-words">{formatContent(tweet.content)}</p>
+          <p className="mt-1 whitespace-pre-wrap break-words">{formattedContent}</p>
 
           {tweet.images && tweet.images.length > 0 && (
             <div className={cn(
@@ -338,4 +345,4 @@ export function TweetCard({ tweet }: TweetCardProps) {
       </AlertDialog>
     </>
   );
-}
+});

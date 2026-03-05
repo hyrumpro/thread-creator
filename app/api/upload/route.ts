@@ -28,9 +28,9 @@ async function handlePost(request: NextRequest) {
     }
   )
 
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+  const { data: { user }, error: sessionError } = await supabase.auth.getUser()
 
-  if (sessionError || !session) {
+  if (sessionError || !user) {
     throw ApiError.unauthorized('Please sign in to upload images.')
   }
 

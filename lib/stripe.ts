@@ -9,7 +9,7 @@ function getStripe(): Stripe {
       throw new Error('STRIPE_SECRET_KEY is not configured')
     }
     stripeInstance = new Stripe(key, {
-      apiVersion: '2026-01-28.clover',
+      apiVersion: '2026-02-25.clover',
     })
   }
   return stripeInstance
@@ -34,7 +34,7 @@ export async function createCheckoutSession(
   email: string
 ): Promise<string> {
   const session = await getStripe().checkout.sessions.create({
-    customer: customerId,
+    customer: customerId || undefined,
     customer_email: customerId ? undefined : email,
     client_reference_id: userId,
     payment_method_types: ['card'],
@@ -45,8 +45,8 @@ export async function createCheckoutSession(
         quantity: 1,
       },
     ],
-    success_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings`,
+    success_url: `${process.env.NEXT_PUBLIC_APP_URL}/?payment=success`,
+    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/?payment=cancelled`,
     metadata: {
       userId,
     },

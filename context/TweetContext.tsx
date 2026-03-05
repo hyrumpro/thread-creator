@@ -68,12 +68,13 @@ export function TweetProvider({ children }: { children: ReactNode }) {
       await queryClient.invalidateQueries({ queryKey: ['timeline'] });
       toast({ title: "Tweet posted!" });
     } catch (error: any) {
+      const message = error?.message ?? 'Something went wrong';
       toast({
         title: "Failed to post tweet",
-        description: error.message,
+        description: message,
         variant: "destructive",
       });
-      throw error;
+      throw new Error(message);
     }
   }, [queryClient, toast]);
 

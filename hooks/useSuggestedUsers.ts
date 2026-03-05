@@ -24,7 +24,7 @@ async function fetchSuggestedUsers(limit: number = 3): Promise<SuggestedUser[]> 
   const { data, error } = await supabase
     .from('profiles')
     .select('user_id, username, display_name, avatar, is_verified, is_pro, followers_count')
-    .not('user_id', 'in', `(${excludeIds.map(id => `'${id}'`).join(',')})`)
+    .not('user_id', 'in', `(${excludeIds.join(',')})`)
     .order('followers_count', { ascending: false })
     .limit(limit);
 
