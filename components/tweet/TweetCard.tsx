@@ -39,6 +39,7 @@ export const TweetCard = memo(function TweetCard({ tweet }: TweetCardProps) {
   const [showCommentModal, setShowCommentModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const isOwnTweet = tweet.author.id === currentUser.id;
   const canEdit = isOwnTweet && currentUser.isPro;
@@ -68,6 +69,14 @@ export const TweetCard = memo(function TweetCard({ tweet }: TweetCardProps) {
     e.stopPropagation();
     setShowCommentModal(true);
   }, []);
+
+  const handleShare = useCallback(async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    await navigator.clipboard.writeText(`${window.location.origin}/tweet/${tweet.id}`);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [tweet.id]);
 
   const handleDelete = useCallback(async () => {
     await deleteTweet(tweet.id);
@@ -303,8 +312,9 @@ export const TweetCard = memo(function TweetCard({ tweet }: TweetCardProps) {
               />
             </button>
 
-            <button className="action-button group">
-              <Share className="w-5 h-5 group-hover:text-primary" />
+            <button onClick={handleShare} className="action-button group" title="Copy link">
+              <Share className={cn("w-5 h-5 group-hover:text-primary", copied && "text-primary")} />
+              {copied && <span className="text-xs text-primary">Copied!</span>}
             </button>
           </div>
         </div>

@@ -542,22 +542,22 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 CREATE OR REPLACE FUNCTION extract_hashtags_from_tweet()
 RETURNS TRIGGER AS $$
 DECLARE
-  hashtag_text TEXT;
+  hashtag_rec TEXT[];
   hashtag_lower TEXT;
 BEGIN
   DELETE FROM tweet_hashtags WHERE tweet_id = NEW.id;
-  
-  FOR hashtag_text IN SELECT regexp_matches(NEW.content, '#[a-zA-Z0-9_]+', 'g')
+
+  FOR hashtag_rec IN SELECT regexp_matches(NEW.content, '#([a-zA-Z0-9_]+)', 'g')
   LOOP
-    hashtag_lower := lower(substring(hashtag_text, 2));
+    hashtag_lower := lower(hashtag_rec[1]);
     CONTINUE WHEN hashtag_lower = '';
-    
+
     INSERT INTO hashtags (tag, tweet_count)
     VALUES (hashtag_lower, 1)
-    ON CONFLICT (tag) DO UPDATE SET 
+    ON CONFLICT (tag) DO UPDATE SET
       tweet_count = hashtags.tweet_count + 1,
       updated_at = NOW();
-    
+
     INSERT INTO tweet_hashtags (tweet_id, hashtag_id)
     VALUES (NEW.id, (SELECT id FROM hashtags WHERE tag = hashtag_lower))
     ON CONFLICT DO NOTHING;

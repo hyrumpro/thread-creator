@@ -8,27 +8,38 @@ import { TweetFeed } from "@/components/tweet/TweetFeed";
 import { useTimeline } from "@/hooks/useTimeline";
 import { useSession } from "@/hooks/useAuth";
 import { PaymentSuccessModal, PaymentCancelledModal } from "@/components/payment/PaymentResultModal";
+import { PortfolioModal } from "@/components/portfolio/PortfolioModal";
 import Link from "next/link";
+
+const PORTFOLIO_MODAL_KEY = 'portfolio_modal_shown';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<"for-you" | "following">("for-you");
   const [paymentStatus, setPaymentStatus] = useState<'success' | 'cancelled' | null>(null);
+  const [showPortfolioModal, setShowPortfolioModal] = useState(false);
   const { data: user } = useSession();
   const timelineQuery = useTimeline(activeTab);
   const queryClient = useQueryClient();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+
+    // Payment status
     const payment = params.get('payment');
     if (payment === 'success') {
       setPaymentStatus('success');
-      // Invalidate profile so Pro status refreshes once webhook fires
       queryClient.invalidateQueries({ queryKey: ['profile'] });
     } else if (payment === 'cancelled') {
       setPaymentStatus('cancelled');
     }
     if (payment) {
       window.history.replaceState({}, '', '/');
+    }
+
+    // Portfolio referral modal — show once
+    const ref = params.get('ref');
+    if (ref === 'portfolio' && !localStorage.getItem(PORTFOLIO_MODAL_KEY)) {
+      setShowPortfolioModal(true);
     }
   }, [queryClient]);
 
@@ -90,6 +101,11 @@ export default function Home() {
           isFetchingMore={timelineQuery.isFetchingNextPage}
           onLoadMore={timelineQuery.hasNextPage ? timelineQuery.fetchNextPage : undefined}
           hasMore={timelineQuery.hasNextPage}
+          emptyMessage={
+            activeTab === "following"
+              ? "Follow people to see their tweets here."
+              : "No posts yet."
+          }
         />
       )}
 
@@ -101,6 +117,15 @@ export default function Home() {
       <PaymentCancelledModal
         open={paymentStatus === 'cancelled'}
         onOpenChange={(open) => !open && setPaymentStatus(null)}
+      />
+
+      {/* Portfolio referral modal — shown once when visiting /?ref=portfolio */}
+      <PortfolioModal
+        open={showPortfolioModal}
+        onClose={() => {
+          setShowPortfolioModal(false);
+          localStorage.setItem(PORTFOLIO_MODAL_KEY, 'true');
+        }}
       />
     </MainLayout>
   );

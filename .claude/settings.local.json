@@ -9,7 +9,13 @@
       "Bash(cd \"/c/Users/Usuario/Desktop/Developer Projects/thread-creator\" && pnpm run build 2>&1)",
       "Bash(ls:*)",
       "Bash(head:*)",
-      "Bash(cd \"C:\\\\Users\\\\Usuario\\\\Desktop\\\\Developer Projects\\\\thread-creator\" && pnpm run build 2>&1)"
+      "Bash(cd \"C:\\\\Users\\\\Usuario\\\\Desktop\\\\Developer Projects\\\\thread-creator\" && pnpm run build 2>&1)",
+      "WebSearch",
+      "Bash(cd \"C:\\\\Users\\\\Usuario\\\\Desktop\\\\Developer Projects\\\\thread-creator\" && npm install 2>&1)",
+      "Bash(cd C:\\\\Users\\\\Usuario\\\\Desktop\\\\Developer Projects\\\\thread-creator:*)",
+      "Bash(del:*)",
+      "Bash(find:*)",
+      "Bash(test:*)"
     ]
   }
 }

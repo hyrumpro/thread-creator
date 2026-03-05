@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Thread Creator - Twitter Clone',
-  description: 'A modern Twitter/X clone built with Next.js 15',
+  description: 'A modern Twitter/X clone built with Next.js 16',
 };
 
 export default function RootLayout({
