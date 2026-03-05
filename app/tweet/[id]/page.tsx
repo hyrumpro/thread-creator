@@ -86,7 +86,7 @@ export default function TweetDetail() {
     queryKey: ['tweet', tweetId],
     queryFn: () => fetchTweetDetail(tweetId),
     enabled: !!tweetId,
-    staleTime: 30 * 1000,
+    staleTime: 0,
   });
 
   return (

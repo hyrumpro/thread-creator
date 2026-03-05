@@ -333,34 +333,62 @@ export const tweetService = {
     offset?: number;
   }): Promise<{ items: FeedTweet[]; nextPageParam?: TimelinePageParam }> {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Not authenticated');
 
     const limit = params.limit ?? 20;
 
     if (params.feed === 'for-you') {
       const offset = params.offset ?? 0;
-      const hoursAgo = params.hoursAgo ?? 48;
 
-      const { data, error } = await (supabase as any).rpc('get_scored_timeline', {
-        p_user_id: user.id,
-        p_limit: limit,
-        p_hours_ago: hoursAgo,
-        p_offset: offset,
-      });
+      if (user) {
+        // Personalized feed for authenticated users
+        const hoursAgo = params.hoursAgo ?? 48;
 
-      if (error) throw error;
+        const { data, error } = await (supabase as any).rpc('get_scored_timeline', {
+          p_user_id: user.id,
+          p_limit: limit,
+          p_hours_ago: hoursAgo,
+          p_offset: offset,
+        });
 
-      const tweetIds = (data ?? []).map((row: any) => row.tweet_id);
-      const interactions = await this.batchGetUserInteractions(tweetIds, user.id);
+        if (error) throw error;
 
-      const items = (data ?? []).map((row: any) => transformTimelineRowWithInteractions(row, interactions[row.tweet_id]));
-      const nextOffset = items.length === limit ? offset + items.length : undefined;
+        const tweetIds = (data ?? []).map((row: any) => row.tweet_id);
+        const interactions = await this.batchGetUserInteractions(tweetIds, user.id);
 
-      return {
-        items,
-        nextPageParam: nextOffset !== undefined ? { feed: 'for-you', offset: nextOffset } : undefined,
-      };
+        const items = (data ?? []).map((row: any) => transformTimelineRowWithInteractions(row, interactions[row.tweet_id]));
+        const nextOffset = items.length === limit ? offset + items.length : undefined;
+
+        return {
+          items,
+          nextPageParam: nextOffset !== undefined ? { feed: 'for-you', offset: nextOffset } : undefined,
+        };
+      } else {
+        // Guest feed: recent public tweets without personalization
+        const { data, error } = await supabase
+          .from('tweets')
+          .select(`
+            *,
+            profiles:user_id(*),
+            tweet_stats(*)
+          `)
+          .is('parent_tweet_id', null)
+          .order('created_at', { ascending: false })
+          .range(offset, offset + limit - 1);
+
+        if (error) throw error;
+
+        const items = (data ?? []).map((row: any) => transformDbTweetWithInteractions(row, undefined));
+        const nextOffset = items.length === limit ? offset + items.length : undefined;
+
+        return {
+          items,
+          nextPageParam: nextOffset !== undefined ? { feed: 'for-you', offset: nextOffset } : undefined,
+        };
+      }
     }
+
+    // Following feed requires authentication
+    if (!user) return { items: [] };
 
     // Following feed (chronological, cursor-based)
     const { data: followingRows, error: followingError } = await supabase

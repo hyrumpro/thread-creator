@@ -134,6 +134,7 @@ export function TweetProvider({ children }: { children: ReactNode }) {
     try {
       await tweetService.createTweet({ content, parent_tweet_id: tweetId });
       await queryClient.invalidateQueries({ queryKey: ['timeline'] });
+      await queryClient.invalidateQueries({ queryKey: ['tweet', tweetId] });
       toast({ title: "Reply posted!" });
     } catch (error: any) {
       toast({
@@ -172,6 +173,7 @@ export function TweetProvider({ children }: { children: ReactNode }) {
     try {
       await tweetService.updateTweet(tweetId, newContent);
       await queryClient.invalidateQueries({ queryKey: ['timeline'] });
+      await queryClient.invalidateQueries({ queryKey: ['tweet', tweetId] });
       toast({ title: "Tweet updated!" });
     } catch (error: any) {
       toast({
@@ -186,6 +188,7 @@ export function TweetProvider({ children }: { children: ReactNode }) {
     try {
       await tweetService.deleteTweet(tweetId);
       await queryClient.invalidateQueries({ queryKey: ['timeline'] });
+      await queryClient.invalidateQueries({ queryKey: ['tweet', tweetId] });
       toast({ title: "Tweet deleted" });
     } catch (error: any) {
       toast({
