@@ -15,7 +15,8 @@
       "Bash(cd C:\\\\Users\\\\Usuario\\\\Desktop\\\\Developer Projects\\\\thread-creator:*)",
       "Bash(del:*)",
       "Bash(find:*)",
-      "Bash(test:*)"
+      "Bash(test:*)",
+      "Bash(pnpm:*)"
     ]
   }
 }
