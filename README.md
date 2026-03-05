@@ -8,7 +8,7 @@
 
 ## Demo
 
-Check out the live demo here: [Thread Creator Demo](https://thread-creator-demo.vercel.app)
+Check out the live demo here: [Thread Creator Demo](https://threads-amber-mu.vercel.app/)
 
 A full-featured social media platform inspired by Twitter/X, built with modern web technologies. Create threads, engage with content, and connect with other users in a seamless, responsive environment.
 
